@@ -103,17 +103,11 @@ pub fn get_terms(site: &Site) -> Result<Terms, String> {
     let categories = api
         .get_terms_of(&site.username, &site.password, "category", 500)
         .map(|v| names_of(&v))
-        .or_else(|_| {
-            api.get_categories(&site.username, &site.password)
-                .map(|v| names_of(&v))
-        })?;
+        .or_else(|_| api.get_categories(&site.username, &site.password).map(|v| names_of(&v)))?;
     let tags = api
         .get_terms_of(&site.username, &site.password, "post_tag", 500)
         .map(|v| names_of(&v))
-        .or_else(|_| {
-            api.get_tags(&site.username, &site.password)
-                .map(|v| names_of(&v))
-        })?;
+        .or_else(|_| api.get_tags(&site.username, &site.password).map(|v| names_of(&v)))?;
     Ok(Terms { categories, tags })
 }
 
@@ -278,9 +272,10 @@ mod tests {
 
     #[test]
     fn test_terms_names_legacy_category_name() {
-        let arr = Value::Array(vec![Value::Struct(vec![
-            ("categoryName".into(), Value::Str("agent".into())),
-        ])]);
+        let arr = Value::Array(vec![Value::Struct(vec![(
+            "categoryName".into(),
+            Value::Str("agent".into()),
+        )])]);
         assert_eq!(names_of(&arr), vec!["agent"]);
     }
 }

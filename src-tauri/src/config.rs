@@ -54,13 +54,9 @@ pub fn config_dir(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(dir)
 }
 
-/// 数据目录：exe 同级的 data\，不依赖任何系统目录
+/// 数据目录：exe 同级的 data\，不依赖任何系统目录（复用公共 crate）
 fn exe_data_dir() -> Result<PathBuf, String> {
-    let exe = std::env::current_exe().map_err(|e| format!("无法获取程序路径：{e}"))?;
-    let dir = exe
-        .parent()
-        .ok_or_else(|| "无法获取程序所在目录".to_string())?;
-    Ok(dir.join("data"))
+    portable_kit::portable::portable_data_dir()
 }
 
 /// 一次性导入系统目录里的旧配置与缓存（可选，导入失败不影响运行）

@@ -104,14 +104,12 @@ impl Client {
             .timeout(std::time::Duration::from_secs(180))
             .build()
             .map_err(|e| format!("创建 HTTP 客户端失败：{e}"))?;
-        Ok(Self {
-            endpoint: endpoint.to_string(),
-            http,
-        })
+        Ok(Self { endpoint: endpoint.to_string(), http })
     }
 
     pub fn call(&self, method: &str, params: &[Value]) -> Result<Value, String> {
-        let mut body = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?><methodCall><methodName>");
+        let mut body =
+            String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?><methodCall><methodName>");
         body.push_str(&escape_xml(method));
         body.push_str("</methodName><params>");
         for p in params {
@@ -129,9 +127,7 @@ impl Client {
             .send()
             .map_err(|e| format!("请求 {} 失败：{e}", self.endpoint))?;
         let status = resp.status();
-        let text = resp
-            .text()
-            .map_err(|e| format!("读取响应失败：{e}"))?;
+        let text = resp.text().map_err(|e| format!("读取响应失败：{e}"))?;
         if !status.is_success() {
             let brief: String = text.chars().take(300).collect();
             return Err(format!("HTTP {status}：{brief}"));
@@ -224,10 +220,7 @@ fn parse_value_inner(reader: &mut Reader<&[u8]>) -> Result<Value, String> {
             b"struct" => parse_struct(reader)?,
             b"array" => parse_array(reader)?,
             other => {
-                return Err(format!(
-                    "不支持的 XML-RPC 类型：{}",
-                    String::from_utf8_lossy(other)
-                ));
+                return Err(format!("不支持的 XML-RPC 类型：{}", String::from_utf8_lossy(other)));
             }
         },
         Ok(other) => return Err(format!("<value> 内容异常：{other:?}")),
@@ -352,9 +345,7 @@ pub struct MetaWeblog {
 
 impl MetaWeblog {
     pub fn new(endpoint: &str) -> Result<Self, String> {
-        Ok(Self {
-            client: Client::new(endpoint)?,
-        })
+        Ok(Self { client: Client::new(endpoint)? })
     }
 
     pub fn new_post(&self, username: &str, password: &str, post: &Value) -> Result<String, String> {
@@ -397,7 +388,12 @@ impl MetaWeblog {
     }
 
     /// WordPress 扩展接口：按条件查询文章列表（支持分页/搜索/状态筛选）
-    pub fn get_posts(&self, username: &str, password: &str, filter: &Value) -> Result<Value, String> {
+    pub fn get_posts(
+        &self,
+        username: &str,
+        password: &str,
+        filter: &Value,
+    ) -> Result<Value, String> {
         let params = vec![
             Value::Str(String::new()),
             Value::Str(username.into()),
@@ -584,7 +580,8 @@ mod tests {
         assert!(body.contains("&amp;"));
         assert!(body.contains("<dateTime.iso8601>2024-01-02T03:04:05</dateTime.iso8601>"));
         // 包进 methodResponse 再解析回来
-        let xml = format!("<methodResponse><params><param>{body}</param></params></methodResponse>");
+        let xml =
+            format!("<methodResponse><params><param>{body}</param></params></methodResponse>");
         let v = parse_response(&xml).unwrap();
         assert_eq!(v.get("title").unwrap().as_string_lossy(), "标题 <test> & \"引号\"");
     }

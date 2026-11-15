@@ -72,13 +72,7 @@ pub struct Progress {
 }
 
 fn emit(app: &AppHandle, state: &str, message: impl Into<String>) {
-    let _ = app.emit(
-        "publish-progress",
-        Progress {
-            state: state.into(),
-            message: message.into(),
-        },
-    );
+    let _ = app.emit("publish-progress", Progress { state: state.into(), message: message.into() });
 }
 
 pub fn publish(app: &AppHandle, req: &PublishRequest) -> Result<String, String> {
@@ -128,10 +122,13 @@ pub fn publish(app: &AppHandle, req: &PublishRequest) -> Result<String, String> 
 
     // 特色图片（wp_thumbnail_id 只支持本地上传后的图片 ID，远程 URL 忽略）
     let mut thumbnail_id: Option<String> = None;
-    if let Some(thumb_raw) = req.meta.thumbnail.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+    if let Some(thumb_raw) = req.meta.thumbnail.as_deref().map(str::trim).filter(|s| !s.is_empty())
+    {
         let thumb = resolve_image_src(base_dir, thumb_raw);
         if is_local_src(&thumb) {
-            if let Some(ic) = upload_one(app, &api, &req.site, &mut site_cache, &thumb, req.forced_update)? {
+            if let Some(ic) =
+                upload_one(app, &api, &req.site, &mut site_cache, &thumb, req.forced_update)?
+            {
                 thumbnail_id = Some(ic.image_id);
             }
         } else {
@@ -147,7 +144,8 @@ pub fn publish(app: &AppHandle, req: &PublishRequest) -> Result<String, String> 
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_else(|| src.clone());
         emit(app, "upload", format!("上传图片 ({}/{})：{name}", i + 1, local_imgs.len()));
-        if let Some(ic) = upload_one(app, &api, &req.site, &mut site_cache, src, req.forced_update)? {
+        if let Some(ic) = upload_one(app, &api, &req.site, &mut site_cache, src, req.forced_update)?
+        {
             url_map.insert(src.clone(), ic.image_url);
         }
     }
@@ -165,12 +163,7 @@ pub fn publish(app: &AppHandle, req: &PublishRequest) -> Result<String, String> 
         .unwrap_or_else(|| render::extract_abstract(title, &upload_html, 120));
 
     // 5. 构造 MetaWeblog 文章结构
-    let date = req
-        .meta
-        .date
-        .as_deref()
-        .and_then(normalize_date)
-        .unwrap_or_else(now_local_iso);
+    let date = req.meta.date.as_deref().and_then(normalize_date).unwrap_or_else(now_local_iso);
     let mut fields: Vec<(String, Value)> = vec![
         ("title".into(), Value::Str(title.to_string())),
         ("description".into(), Value::Str(upload_html)),
@@ -204,13 +197,7 @@ pub fn publish(app: &AppHandle, req: &PublishRequest) -> Result<String, String> 
     };
 
     // 7. 写缓存
-    site_cache.post.insert(
-        slug_key,
-        PostCache {
-            post_id: res_id.clone(),
-            thumbnail_id,
-        },
-    );
+    site_cache.post.insert(slug_key, PostCache { post_id: res_id.clone(), thumbnail_id });
     save_site_cache(app, &req.site, &site_cache)?;
 
     emit(app, "complete", format!("发布完成，文章 ID：{res_id}"));
@@ -268,10 +255,7 @@ fn upload_one(
     let res = api
         .new_media_object(&site.username, &site.password, &name, mime, bits, true)
         .map_err(|e| format!("图片 {name} 上传失败：{e}"))?;
-    let ic = ImageCache {
-        image_id: res.id,
-        image_url: res.url,
-    };
+    let ic = ImageCache { image_id: res.id, image_url: res.url };
     cache.media.insert(key, ic.clone());
     // 每张图片上传后立即落盘，中途失败也不丢缓存
     save_site_cache(app, site, cache)?;

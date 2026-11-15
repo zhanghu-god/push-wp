@@ -25,11 +25,7 @@ pub fn resolve_image_src(base_dir: &Path, src: &str) -> String {
         return src;
     }
     let p = Path::new(&src);
-    let abs = if p.is_absolute() {
-        p.to_path_buf()
-    } else {
-        base_dir.join(p)
-    };
+    let abs = if p.is_absolute() { p.to_path_buf() } else { base_dir.join(p) };
     // HTML 中统一使用正斜杠，Windows 下同样可读
     abs.to_string_lossy().replace('\\', "/")
 }
@@ -117,11 +113,7 @@ fn serialize_dom(dom: &RcDom) -> String {
 
 fn attr_value(handle: &Handle, name: &str) -> Option<String> {
     if let NodeData::Element { attrs, .. } = &handle.data {
-        return attrs
-            .borrow()
-            .iter()
-            .find(|a| a.name.local == *name)
-            .map(|a| a.value.to_string());
+        return attrs.borrow().iter().find(|a| a.name.local == *name).map(|a| a.value.to_string());
     }
     None
 }
@@ -275,10 +267,7 @@ fn wrap_in_anchor(img: &Handle, href: &str) {
     let a = Node::new(NodeData::Element {
         name: QualName::new(None, ns!(html), local_name!("a")),
         attrs: RefCell::new(vec![
-            Attribute {
-                name: QualName::new(None, ns!(), local_name!("href")),
-                value: href.into(),
-            },
+            Attribute { name: QualName::new(None, ns!(), local_name!("href")), value: href.into() },
             Attribute {
                 name: QualName::new(None, ns!(), LocalName::from("data-fancybox")),
                 value: "post-images".into(),
@@ -312,10 +301,8 @@ fn tabs_to_fullwidth(handle: &Handle, in_code: bool, in_ph: bool) {
         }
         NodeData::Element { name, .. } => {
             let is_code = name.local == local_name!("code") || name.local == local_name!("pre");
-            let is_ph = matches!(
-                name.local.as_ref(),
-                "p" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
-            );
+            let is_ph =
+                matches!(name.local.as_ref(), "p" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6");
             (in_code || is_code, in_ph || is_ph)
         }
         _ => (in_code, in_ph),
@@ -425,7 +412,9 @@ mod tests {
 
     #[test]
     fn test_collect_local_images() {
-        let html = markdown_to_html("![一](img/a.png)\n![二](img/b.png)\n![三](img/a.png)\n![外](https://x.com/c.png)\n");
+        let html = markdown_to_html(
+            "![一](img/a.png)\n![二](img/b.png)\n![三](img/a.png)\n![外](https://x.com/c.png)\n",
+        );
         let processed = process_html(&html, Path::new("C:/blog"));
         let imgs = collect_local_images(&processed);
         assert_eq!(imgs.len(), 2, "imgs: {imgs:?}");

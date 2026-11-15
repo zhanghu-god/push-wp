@@ -38,10 +38,7 @@ fn render_doc(content: &str, path: &str) -> MarkdownDoc {
 pub fn read_markdown(path: String) -> Result<ReadResult, String> {
     let content = fs::read_to_string(&path).map_err(|e| format!("打开文件失败：{e}"))?;
     let doc = render_doc(&content, &path);
-    Ok(ReadResult {
-        content,
-        html: doc.html,
-    })
+    Ok(ReadResult { content, html: doc.html })
 }
 
 /// 编辑后重新解析渲染（预览用）
@@ -142,15 +139,15 @@ pub fn get_app_version() -> String {
 
 /// 检查 GitHub 最新 Release 是否有新版本
 #[tauri::command]
-pub fn check_update() -> Result<UpdateInfo, String> {
-    update::check_update()
+pub async fn check_update() -> Result<UpdateInfo, String> {
+    update::check_update().await
 }
 
 /// 下载并校验更新包，解压暂存 exe 与 README
 #[tauri::command]
-pub fn prepare_update(app: AppHandle, info: UpdateInfo) -> Result<PreparedUpdate, String> {
+pub async fn prepare_update(app: AppHandle, info: UpdateInfo) -> Result<PreparedUpdate, String> {
     let dir = config::config_dir(&app)?;
-    update::prepare_update(&dir, &info)
+    update::prepare_update(&dir, &info).await
 }
 
 /// 查询已暂存待安装的更新（用户之前选择了“稍后”）

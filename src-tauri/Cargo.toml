@@ -17,23 +17,15 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-dialog = "2"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+portable-kit.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 comrak = { version = "0.39", default-features = false }
-reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
+reqwest = { workspace = true, features = ["blocking"] }
 quick-xml = "0.37"
 base64 = "0.22"
-chrono = { version = "0.4", features = ["serde"] }
+chrono.workspace = true
 thiserror = "2"
 markup5ever_rcdom = "0.39.0"
 html5ever = "0.39.0"
 tendril = "0.5.1"
-semver = "1.0.28"
-sha2 = "0.10.9"
-zip = { version = "4.2.0", default-features = false, features = ["deflate"] }
-
-[profile.release]
-codegen-units = 1
-lto = true
-opt-level = "s"
-strip = true

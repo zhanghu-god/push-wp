@@ -9,6 +9,9 @@ $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $Config = Get-Content -Raw -LiteralPath (Join-Path $Root "src-tauri\tauri.conf.json") | ConvertFrom-Json
 $Version = $Config.version
 $Exe = Join-Path $Root "src-tauri\target\release\push-wp.exe"
+# workspace 共享 target 在根目录；单独克隆时才在 src-tauri/target
+$WsExe = Join-Path $Root "..\target\release\push-wp.exe"
+if (Test-Path -LiteralPath $WsExe) { $Exe = $WsExe }
 $ReleaseDir = Join-Path $Root "release"
 $Zip = Join-Path $ReleaseDir "push-wp_${Version}_x64-portable.zip"
 $WorkDir = Join-Path $ReleaseDir ("staging-" + [guid]::NewGuid().ToString("N"))
