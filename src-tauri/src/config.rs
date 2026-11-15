@@ -34,14 +34,66 @@ impl Default for Settings {
     }
 }
 
-/// 应用配置目录（不存在时自动创建）
+/// 应用配置目录（不存在时自动创建）。
+///
+/// - 便携模式：exe 同级存在 `.portable` 标记文件时，使用 `exe目录\data\`，
+///   配置与数据全部自包含，不污染系统目录；首次运行自动迁移旧配置。
+/// - 默认：系统应用配置目录（%APPDATA%\com.pushwp.rust）。
 pub fn config_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    if let Some(dir) = portable_data_dir() {
+        migrate_legacy_config(app, &dir);
+        fs::create_dir_all(&dir).map_err(|e| format!("无法创建便携数据目录：{e}"))?;
+        return Ok(dir);
+    }
     let dir = app
         .path()
         .app_config_dir()
         .map_err(|e| format!("无法获取配置目录：{e}"))?;
     fs::create_dir_all(&dir).map_err(|e| format!("无法创建配置目录：{e}"))?;
     Ok(dir)
+}
+
+/// 便携模式数据目录：exe 同级有 `.portable` 标记时返回 Some(exe目录/data)
+fn portable_data_dir() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let dir = exe.parent()?.to_path_buf();
+    if dir.join(".portable").exists() {
+        Some(dir.join("data"))
+    } else {
+        None
+    }
+}
+
+/// 便携版首次运行：把系统目录里的旧配置与缓存带过来（不覆盖已有文件）
+fn migrate_legacy_config(app: &AppHandle, portable_dir: &PathBuf) {
+    let settings = portable_dir.join("settings.json");
+    if settings.exists() {
+        return;
+    }
+    let Ok(legacy) = app.path().app_config_dir() else {
+        return;
+    };
+    if !legacy.join("settings.json").exists() {
+        return;
+    }
+    let _ = fs::create_dir_all(portable_dir);
+    let _ = fs::copy(legacy.join("settings.json"), &settings);
+    let legacy_cache = legacy.join("cache");
+    if legacy_cache.is_dir() {
+        let target = portable_dir.join("cache");
+        let _ = fs::create_dir_all(&target);
+        if let Ok(entries) = fs::read_dir(&legacy_cache) {
+            for entry in entries.flatten() {
+                let p = entry.path();
+                if p.is_file() {
+                    let dest = target.join(entry.file_name());
+                    if !dest.exists() {
+                        let _ = fs::copy(&p, &dest);
+                    }
+                }
+            }
+        }
+    }
 }
 
 pub fn load_settings(app: &AppHandle) -> Result<Settings, String> {
