@@ -16,7 +16,8 @@
 ## 自动更新
 
 - 启动时静默检查，有新版本会提示；也可在 设置 → 关于与更新 手动检查
-- 更新包下载后校验文件大小与 SHA-256，暂存于 `data\update`
+- 检查走 github.com releases/latest 重定向 + Release 内 SHA256SUMS.txt 校验，不依赖 api.github.com 匿名 API（避免共享 IP 限流）
+- 更新包下载后校验 SHA-256，暂存于 `data\update`
 - 立即重启由后台脚本等待进程退出后只替换 exe 与 README，不覆盖用户数据
 - 选择“稍后”则保留暂存更新，下次启动可继续安装
 - 更新失败不影响本地功能；遗留更新目录会在启动时清理
