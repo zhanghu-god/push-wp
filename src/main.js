@@ -122,6 +122,9 @@ async function loadSettings() {
 function openSettings() {
   renderSiteList();
   $('settings-modal').hidden = false;
+  invoke('get_app_version').then((v) => {
+    $('about-version').textContent = `v${v}`;
+  });
 }
 
 function renderSiteList() {
@@ -623,6 +626,81 @@ function updateWithCurrent(postId) {
   openPublish(postId);
 }
 
+// ---------- 自动更新 ----------
+
+const upd = { info: null, prepared: null, checking: false };
+
+async function checkUpdate(silent = false) {
+  if (upd.checking) return null;
+  upd.checking = true;
+  if (!silent) $('update-status').textContent = '正在检查更新…';
+  try {
+    const info = await invoke('check_update');
+    upd.info = info;
+    if (!silent) {
+      $('update-status').textContent = info.has_update
+        ? `发现新版本 v${info.latest_version}（当前 v${info.current_version}）`
+        : `当前已是最新版本（v${info.current_version}）`;
+    }
+    if (info.has_update) {
+      $('btn-download-update').hidden = false;
+      const link = $('update-release-link');
+      link.href = info.release_url;
+      link.hidden = false;
+    }
+    return info;
+  } catch (e) {
+    if (!silent) $('update-status').textContent = `检查更新失败：${e}`;
+    return null;
+  } finally {
+    upd.checking = false;
+  }
+}
+
+async function downloadUpdate() {
+  if (!upd.info) return;
+  $('btn-download-update').disabled = true;
+  $('update-status').textContent = '正在下载并校验更新包…';
+  try {
+    const prepared = await invoke('prepare_update', { info: upd.info });
+    upd.prepared = prepared;
+    $('update-status').textContent = `更新 v${prepared.version} 已就绪${prepared.already_staged ? '（之前已下载）' : ''}`;
+    $('update-restart').hidden = false;
+  } catch (e) {
+    $('update-status').textContent = `下载更新失败：${e}`;
+  } finally {
+    $('btn-download-update').disabled = false;
+  }
+}
+
+async function applyRestart() {
+  $('update-status').textContent = '正在重启并替换程序…';
+  try {
+    await invoke('apply_update_and_restart');
+  } catch (e) {
+    $('update-status').textContent = `更新失败：${e}`;
+  }
+}
+
+async function checkPendingUpdate() {
+  try {
+    const pending = await invoke('pending_update');
+    if (pending) {
+      const ok = await dialogConfirm(
+        `已下载的更新 v${pending.version} 待安装，是否现在安装并重启？`,
+        { title: '安装更新', kind: 'info' },
+      );
+      if (ok) {
+        openSettings();
+        $('update-status').textContent = `更新 v${pending.version} 已就绪`;
+        $('update-restart').hidden = false;
+      }
+    }
+  } catch (e) {
+    // 无暂存更新时静默
+  }
+}
+
 // ---------- 事件绑定 ----------
 
 function bindEvents() {
@@ -639,6 +717,14 @@ function bindEvents() {
   });
   $('btn-settings-save').addEventListener('click', saveSettings);
   $('btn-do-publish').addEventListener('click', doPublish);
+  $('btn-check-update').addEventListener('click', () => checkUpdate(false));
+  $('btn-download-update').addEventListener('click', downloadUpdate);
+  $('btn-apply-restart').addEventListener('click', applyRestart);
+  $('btn-update-later').addEventListener('click', () => {
+    $('update-restart').hidden = true;
+    $('settings-modal').hidden = true;
+    setStatus('更新已暂存，下次启动可安装');
+  });
   $('pub-site').addEventListener('change', () => {
     refreshCachedId();
     loadTerms(currentPubSite());
@@ -746,4 +832,17 @@ function bindEvents() {
   bindEvents();
   await loadSettings();
   setStatus('就绪');
+  // 启动时静默检查更新，有新版本则提示
+  checkUpdate(true).then((info) => {
+    if (info && info.has_update) {
+      dialogConfirm(
+        `检测到新版本 v${info.latest_version}（当前 v${info.current_version}），是否前往下载更新？`,
+        { title: '发现新版本', kind: 'info' },
+      ).then((ok) => {
+        if (ok) openSettings();
+      });
+    }
+  });
+  // 之前选择“稍后”的暂存更新，启动时询问是否安装
+  checkPendingUpdate();
 })();

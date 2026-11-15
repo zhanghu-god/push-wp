@@ -328,10 +328,10 @@ fn tabs_to_fullwidth(handle: &Handle, in_code: bool, in_ph: bool) {
 fn collect_text(handle: &Handle, out: &mut String) {
     match &handle.data {
         NodeData::Text { contents } => out.push_str(&contents.borrow()),
-        NodeData::Element { name, .. } => {
-            if name.local == local_name!("script") || name.local == local_name!("style") {
-                return;
-            }
+        NodeData::Element { name, .. }
+            if name.local == local_name!("script") || name.local == local_name!("style") =>
+        {
+            return;
         }
         _ => {}
     }

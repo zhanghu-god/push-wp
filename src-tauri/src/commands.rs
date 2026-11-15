@@ -11,6 +11,7 @@ use crate::config::{self, Settings, Site};
 use crate::posts::{self, PostDetail, PostSummary, Terms};
 use crate::publish::{self, PublishRequest};
 use crate::render;
+use crate::update::{self, PreparedUpdate, UpdateInfo};
 
 /// 渲染结果
 #[derive(Debug, Clone, Serialize)]
@@ -111,4 +112,40 @@ pub fn delete_post(app: AppHandle, site: Site, post_id: String) -> Result<(), St
 #[tauri::command]
 pub fn get_terms(site: Site) -> Result<Terms, String> {
     posts::get_terms(&site)
+}
+
+// ---------- 自动更新 ----------
+
+#[tauri::command]
+pub fn get_app_version() -> String {
+    update::current_version().to_string()
+}
+
+/// 检查 GitHub 最新 Release 是否有新版本
+#[tauri::command]
+pub fn check_update() -> Result<UpdateInfo, String> {
+    update::check_update()
+}
+
+/// 下载并校验更新包，解压暂存 exe 与 README
+#[tauri::command]
+pub fn prepare_update(app: AppHandle, info: UpdateInfo) -> Result<PreparedUpdate, String> {
+    let dir = config::config_dir(&app)?;
+    update::prepare_update(&dir, &info)
+}
+
+/// 查询已暂存待安装的更新（用户之前选择了“稍后”）
+#[tauri::command]
+pub fn pending_update(app: AppHandle) -> Result<Option<PreparedUpdate>, String> {
+    let dir = config::config_dir(&app)?;
+    Ok(update::pending_update(&dir))
+}
+
+/// 立即重启：后台脚本等待本进程退出后替换 exe/README 并重新启动
+#[tauri::command]
+pub fn apply_update_and_restart(app: AppHandle) -> Result<(), String> {
+    let dir = config::config_dir(&app)?;
+    update::apply_update_and_restart(&dir)?;
+    app.exit(0);
+    Ok(())
 }

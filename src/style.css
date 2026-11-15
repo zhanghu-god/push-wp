@@ -518,6 +518,32 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); }
   margin: 24px 0;
 }
 
+/* 关于与更新 */
+
+.about-section {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.about-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.about-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 8px 0;
+}
+
+.about-actions a { color: var(--accent); font-size: 13px; }
+
+#update-status { line-height: 1.6; word-break: break-all; }
+
 /* 文章管理 */
 
 .manager-toolbar {

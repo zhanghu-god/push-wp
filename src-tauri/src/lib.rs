@@ -6,23 +6,38 @@ mod config;
 mod posts;
 mod publish;
 mod render;
+mod update;
 mod xmlrpc;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut context = tauri::generate_context!();
-    // 把 Tauri 的宿主目录（含 WebView2 的 EBWebView 数据目录）
-    // 统一重定向到 exe 同级 data\，彻底消除系统目录副作用
+    // 把 Tauri 的宿主目录统一重定向到 exe 同级 data\，彻底消除系统目录副作用；
+    // WebView2 的 localData 指向 data/cache/webview2
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
+            let data = dir.join("data");
             context.config_mut().app.app_directories_override =
-                Some(tauri::utils::config::AppDirectoriesOverride::Root(
-                    dir.join("data"),
+                Some(tauri::utils::config::AppDirectoriesOverride::Directories(
+                    tauri::utils::config::AppDirectoryOverrides {
+                        config: Some(data.clone()),
+                        data: Some(data.clone()),
+                        local_data: Some(data.join("cache").join("webview2")),
+                        cache: Some(data.join("caches")),
+                        log: Some(data.join("logs")),
+                    },
                 ));
         }
     }
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            // 清理上次更新遗留的脚本目录（有 update.json 的暂存更新会保留）
+            if let Ok(dir) = config::config_dir(app.handle()) {
+                update::cleanup_leftover(&dir);
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::read_markdown,
             commands::render_markdown,
@@ -35,6 +50,11 @@ pub fn run() {
             commands::get_post_detail,
             commands::delete_post,
             commands::get_terms,
+            commands::get_app_version,
+            commands::check_update,
+            commands::prepare_update,
+            commands::pending_update,
+            commands::apply_update_and_restart,
         ])
         .run(context)
         .expect("启动 Tauri 应用失败");
