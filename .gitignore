@@ -1,6 +1,9 @@
 # Rust
 src-tauri/target/
 
+# 发布产物（ZIP/校验文件只上传 Release，不进版本库）
+release/
+
 # Tauri 生成的权限 schema
 src-tauri/gen/schemas/
 
