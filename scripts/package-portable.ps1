@@ -15,7 +15,7 @@ if (Test-Path -LiteralPath $WsExe) { $Exe = $WsExe }
 $ReleaseDir = Join-Path $Root "release"
 $Zip = Join-Path $ReleaseDir "push-wp_${Version}_x64-portable.zip"
 $WorkDir = Join-Path $ReleaseDir ("staging-" + [guid]::NewGuid().ToString("N"))
-$Stage = Join-Path $WorkDir "stage"
+$Stage = Join-Path $WorkDir $Config.productName
 
 try {
   if (-not $SkipBuild) {
@@ -29,7 +29,7 @@ try {
   Copy-Item -LiteralPath (Join-Path $Root "README.md") -Destination (Join-Path $Stage "README.md")
 
   New-Item -ItemType Directory -Force -Path $ReleaseDir | Out-Null
-  Compress-Archive -Path (Join-Path $Stage "*") -DestinationPath $Zip -Force
+  Compress-Archive -LiteralPath $Stage -DestinationPath $Zip -Force
   $Hash = Get-FileHash -Algorithm SHA256 -LiteralPath $Zip
   $Sums = Join-Path $ReleaseDir "SHA256SUMS.txt"
   [System.IO.File]::WriteAllText($Sums, "$($Hash.Hash.ToLowerInvariant())  $(Split-Path -Leaf $Zip)`r`n", (New-Object System.Text.UTF8Encoding($false)))
