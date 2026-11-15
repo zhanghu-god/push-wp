@@ -5,15 +5,48 @@ const { listen } = window.__TAURI__.event;
 const { open, save, confirm: dialogConfirm } = window.__TAURI__.dialog;
 
 const $ = (id) => document.getElementById(id);
+const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
 
 const state = {
   filePath: null,
   modified: false,
-  settings: { sites: [] },
+  settings: { sites: [], theme: 'system' },
   publishing: false,
   detail: null,
   terms: { categories: [], tags: [] },
 };
+
+// ---------- 主题 ----------
+
+function applyTheme() {
+  const theme = state.settings.theme || 'system';
+  const dark = theme === 'dark' || (theme === 'system' && systemDark.matches);
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  document.querySelectorAll('[data-theme-choice]').forEach((btn) => {
+    const selected = btn.dataset.themeChoice === theme;
+    btn.classList.toggle('active', selected);
+    btn.setAttribute('aria-pressed', String(selected));
+  });
+}
+
+async function saveTheme(theme) {
+  const previous = state.settings.theme;
+  state.settings.theme = theme;
+  applyTheme();
+  try {
+    await invoke('save_settings', { settings: state.settings });
+  } catch (e) {
+    state.settings.theme = previous;
+    applyTheme();
+    setStatus(`保存外观失败：${e}`);
+  }
+}
+
+function toggleAppearance(force) {
+  const panel = $('appearance-panel');
+  const shouldOpen = typeof force === 'boolean' ? force : panel.hidden;
+  panel.hidden = !shouldOpen;
+}
 
 // ---------- 状态栏 ----------
 
@@ -122,9 +155,6 @@ async function loadSettings() {
 function openSettings() {
   renderSiteList();
   $('settings-modal').hidden = false;
-  invoke('get_app_version').then((v) => {
-    $('about-version').textContent = `v${v}`;
-  });
 }
 
 function renderSiteList() {
@@ -626,59 +656,65 @@ function updateWithCurrent(postId) {
   openPublish(postId);
 }
 
-// ---------- 自动更新 ----------
+// ---------- 关于与自动更新 ----------
 
-const upd = { info: null, prepared: null, checking: false };
+const upd = { info: null, prepared: null, busy: false };
 
-async function checkUpdate(silent = false) {
-  if (upd.checking) return null;
-  upd.checking = true;
-  if (!silent) $('update-status').textContent = '正在检查更新…';
+async function openAbout() {
+  toggleAppearance(false);
+  $('about-modal').hidden = false;
+  try {
+    const info = await invoke('get_app_info');
+    $('about-version').textContent = `v${info.version}`;
+    $('about-repo').textContent = info.repo;
+    $('about-data-dir').textContent = info.dataDir;
+    $('about-data-dir').title = info.dataDir;
+  } catch (e) {
+    $('about-version').textContent = '未知';
+  }
+}
+
+function setUpdateStatus(text, isError = false) {
+  const el = $('update-status');
+  el.textContent = text;
+  el.classList.toggle('error', isError);
+}
+
+async function checkForUpdate(manual = false) {
+  if (upd.busy) return;
+  upd.busy = true;
+  $('btn-check-update').disabled = true;
+  setUpdateStatus('正在检查更新…');
   try {
     const info = await invoke('check_update');
     upd.info = info;
-    if (!silent) {
-      $('update-status').textContent = info.has_update
-        ? `发现新版本 v${info.latest_version}（当前 v${info.current_version}）`
-        : `当前已是最新版本（v${info.current_version}）`;
+    if (!info.has_update) {
+      setUpdateStatus(`已是最新版本 v${info.current_version}`);
+      return;
     }
-    if (info.has_update) {
-      $('btn-download-update').hidden = false;
-      const link = $('update-release-link');
-      link.href = info.release_url;
-      link.hidden = false;
-    }
-    return info;
-  } catch (e) {
-    if (!silent) $('update-status').textContent = `检查更新失败：${e}`;
-    return null;
-  } finally {
-    upd.checking = false;
-  }
-}
-
-async function downloadUpdate() {
-  if (!upd.info) return;
-  $('btn-download-update').disabled = true;
-  $('update-status').textContent = '正在下载并校验更新包…';
-  try {
-    const prepared = await invoke('prepare_update', { info: upd.info });
+    setUpdateStatus(`发现新版本 v${info.latest_version}，正在下载并校验…`);
+    const prepared = await invoke('prepare_update', { info });
     upd.prepared = prepared;
-    $('update-status').textContent = `更新 v${prepared.version} 已就绪${prepared.already_staged ? '（之前已下载）' : ''}`;
-    $('update-restart').hidden = false;
+    setUpdateStatus(`新版本 v${prepared.version} 已准备好`);
+    $('update-version').textContent = `v${prepared.version}`;
+    $('update-modal').hidden = false;
   } catch (e) {
-    $('update-status').textContent = `下载更新失败：${e}`;
+    setUpdateStatus(`更新失败：${e}`, true);
   } finally {
-    $('btn-download-update').disabled = false;
+    upd.busy = false;
+    $('btn-check-update').disabled = false;
   }
 }
 
-async function applyRestart() {
-  $('update-status').textContent = '正在重启并替换程序…';
+async function restartForUpdate() {
+  $('btn-apply-restart').disabled = true;
+  $('btn-update-later').disabled = true;
   try {
     await invoke('apply_update_and_restart');
   } catch (e) {
-    $('update-status').textContent = `更新失败：${e}`;
+    $('btn-apply-restart').disabled = false;
+    $('btn-update-later').disabled = false;
+    setUpdateStatus(`重启更新失败：${e}`, true);
   }
 }
 
@@ -686,15 +722,8 @@ async function checkPendingUpdate() {
   try {
     const pending = await invoke('pending_update');
     if (pending) {
-      const ok = await dialogConfirm(
-        `已下载的更新 v${pending.version} 待安装，是否现在安装并重启？`,
-        { title: '安装更新', kind: 'info' },
-      );
-      if (ok) {
-        openSettings();
-        $('update-status').textContent = `更新 v${pending.version} 已就绪`;
-        $('update-restart').hidden = false;
-      }
+      $('update-version').textContent = `v${pending.version}`;
+      $('update-modal').hidden = false;
     }
   } catch (e) {
     // 无暂存更新时静默
@@ -709,6 +738,8 @@ function bindEvents() {
   $('btn-welcome-open').addEventListener('click', openFile);
   $('btn-save').addEventListener('click', saveFile);
   $('btn-settings').addEventListener('click', openSettings);
+  $('btn-appearance').addEventListener('click', () => toggleAppearance());
+  $('btn-about').addEventListener('click', openAbout);
   $('btn-publish').addEventListener('click', () => openPublish());
   $('btn-manager').addEventListener('click', openManager);
   $('btn-add-site').addEventListener('click', () => {
@@ -717,13 +748,22 @@ function bindEvents() {
   });
   $('btn-settings-save').addEventListener('click', saveSettings);
   $('btn-do-publish').addEventListener('click', doPublish);
-  $('btn-check-update').addEventListener('click', () => checkUpdate(false));
-  $('btn-download-update').addEventListener('click', downloadUpdate);
-  $('btn-apply-restart').addEventListener('click', applyRestart);
+  $('btn-check-update').addEventListener('click', () => checkForUpdate(true));
+  $('btn-apply-restart').addEventListener('click', restartForUpdate);
   $('btn-update-later').addEventListener('click', () => {
-    $('update-restart').hidden = true;
-    $('settings-modal').hidden = true;
-    setStatus('更新已暂存，下次启动可安装');
+    $('update-modal').hidden = true;
+    setStatus('更新已保留，可稍后在“关于”中重启更新');
+  });
+  document.querySelectorAll('[data-theme-choice]').forEach((btn) => {
+    btn.addEventListener('click', () => saveTheme(btn.dataset.themeChoice));
+  });
+  document.addEventListener('mousedown', (e) => {
+    if (!$('appearance-panel').contains(e.target) && !$('btn-appearance').contains(e.target)) {
+      toggleAppearance(false);
+    }
+  });
+  systemDark.addEventListener('change', () => {
+    if ((state.settings.theme || 'system') === 'system') applyTheme();
   });
   $('pub-site').addEventListener('change', () => {
     refreshCachedId();
@@ -780,7 +820,10 @@ function bindEvents() {
       e.preventDefault();
       openFile();
     } else if (e.key === 'Escape') {
-      if (!$('detail-modal').hidden) $('detail-modal').hidden = true;
+      toggleAppearance(false);
+      if (!$('update-modal').hidden) $('update-modal').hidden = true;
+      else if (!$('about-modal').hidden) $('about-modal').hidden = true;
+      else if (!$('detail-modal').hidden) $('detail-modal').hidden = true;
       else if (!$('manager-modal').hidden) $('manager-modal').hidden = true;
       else {
         $('settings-modal').hidden = true;
@@ -831,18 +874,10 @@ function bindEvents() {
 (async function init() {
   bindEvents();
   await loadSettings();
+  applyTheme();
   setStatus('就绪');
-  // 启动时静默检查更新，有新版本则提示
-  checkUpdate(true).then((info) => {
-    if (info && info.has_update) {
-      dialogConfirm(
-        `检测到新版本 v${info.latest_version}（当前 v${info.current_version}），是否前往下载更新？`,
-        { title: '发现新版本', kind: 'info' },
-      ).then((ok) => {
-        if (ok) openSettings();
-      });
-    }
-  });
-  // 之前选择“稍后”的暂存更新，启动时询问是否安装
+  // 启动时静默检查更新，有新版本则下载并弹出确认
+  checkForUpdate(false);
+  // 之前选择“稍后”的暂存更新，启动时提示安装
   checkPendingUpdate();
 })();

@@ -19,6 +19,13 @@ pub struct Site {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
     pub sites: Vec<Site>,
+    /// 主题：system / light / dark
+    #[serde(default = "default_theme")]
+    pub theme: String,
+}
+
+fn default_theme() -> String {
+    "system".into()
 }
 
 impl Default for Settings {
@@ -30,6 +37,7 @@ impl Default for Settings {
                 username: "username".into(),
                 password: String::new(),
             }],
+            theme: default_theme(),
         }
     }
 }

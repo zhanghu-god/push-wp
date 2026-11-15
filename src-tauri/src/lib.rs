@@ -50,6 +50,7 @@ pub fn run() {
             commands::get_post_detail,
             commands::delete_post,
             commands::get_terms,
+            commands::get_app_info,
             commands::get_app_version,
             commands::check_update,
             commands::prepare_update,

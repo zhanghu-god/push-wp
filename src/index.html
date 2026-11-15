@@ -16,6 +16,8 @@
       <button id="btn-publish" disabled>发布</button>
       <button id="btn-manager">文章管理</button>
       <button id="btn-settings">设置</button>
+      <button id="btn-appearance">外观</button>
+      <button id="btn-about">关于</button>
     </div>
     <div id="file-label">未打开文件</div>
   </header>
@@ -59,24 +61,6 @@
         图片覆盖上传需要按原版教程替换 WordPress 的 XML-RPC 脚本。</p>
         <div id="site-list"></div>
         <button id="btn-add-site">＋ 添加站点</button>
-
-        <!-- 关于与更新 -->
-        <div class="about-section">
-          <div class="about-head">
-            <strong>关于与更新</strong>
-            <span class="dim">当前版本 <span id="about-version">-</span></span>
-          </div>
-          <div class="about-actions">
-            <button id="btn-check-update">检查更新</button>
-            <button id="btn-download-update" class="primary" hidden>下载并更新</button>
-            <a id="update-release-link" href="#" target="_blank" hidden>查看 Release</a>
-          </div>
-          <div id="update-status" class="dim"></div>
-          <div class="about-actions" id="update-restart" hidden>
-            <button id="btn-apply-restart" class="primary">立即重启更新</button>
-            <button id="btn-update-later">稍后</button>
-          </div>
-        </div>
       </div>
       <div class="modal-footer">
         <button id="btn-settings-save" class="primary">保存设置</button>
@@ -226,6 +210,61 @@
       <div class="modal-footer">
         <button id="detail-delete" class="danger">删除文章</button>
         <button id="detail-update" class="primary">用当前文档更新此文章</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 外观面板 -->
+  <aside id="appearance-panel" class="appearance-panel" hidden>
+    <div class="panel-heading">
+      <strong>外观</strong>
+      <span>自动保存在本机</span>
+    </div>
+    <div class="setting-row">
+      <span>主题</span>
+      <div class="segmented" role="group" aria-label="主题">
+        <button type="button" data-theme-choice="system">跟随系统</button>
+        <button type="button" data-theme-choice="light">浅色</button>
+        <button type="button" data-theme-choice="dark">深色</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 关于对话框 -->
+  <div id="about-modal" class="modal-overlay" hidden>
+    <div class="modal about-modal">
+      <button class="close-btn about-close" data-close="about-modal">×</button>
+      <div class="about-hero">
+        <div class="about-icon">📝</div>
+        <div class="about-title">
+          <h2>push-wp</h2>
+          <span id="about-version" class="version-badge">v…</span>
+        </div>
+      </div>
+      <p class="about-desc">独立、便携的 Markdown → WordPress 发布工具。</p>
+      <div class="about-meta">
+        <div class="about-row"><span>项目仓库</span><span id="about-repo" class="about-value"></span></div>
+        <div class="about-row"><span>数据目录</span><span id="about-data-dir" class="about-value about-path"></span></div>
+      </div>
+      <div class="about-update">
+        <p id="update-status" class="update-status"></p>
+        <button id="btn-check-update" class="primary about-check">检查更新</button>
+      </div>
+      <p class="dim about-note">自动更新只替换程序文件，不会覆盖 data 中的配置与缓存。</p>
+    </div>
+  </div>
+
+  <!-- 更新确认对话框 -->
+  <div id="update-modal" class="modal-overlay" hidden>
+    <div class="modal update-modal">
+      <div class="modal-title"><h3>更新已就绪</h3></div>
+      <div class="modal-body">
+        <p class="confirm-text">新版本 <strong id="update-version"></strong> 已下载并通过校验。是否现在重启应用以完成更新？</p>
+        <p class="dim">选择“稍后”会保留已下载更新，下次启动时继续提示。</p>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-update-later">稍后</button>
+        <button id="btn-apply-restart" class="primary">现在重启</button>
       </div>
     </div>
   </div>

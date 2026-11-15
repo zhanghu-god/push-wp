@@ -116,6 +116,25 @@ pub fn get_terms(site: Site) -> Result<Terms, String> {
 
 // ---------- 自动更新 ----------
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppInfo {
+    pub version: String,
+    pub repo: String,
+    pub data_dir: String,
+}
+
+/// 关于面板信息：版本、仓库、数据目录
+#[tauri::command]
+pub fn get_app_info(app: AppHandle) -> Result<AppInfo, String> {
+    let dir = config::config_dir(&app)?;
+    Ok(AppInfo {
+        version: update::current_version().to_string(),
+        repo: "zhanghu-god/push-wp".to_string(),
+        data_dir: dir.to_string_lossy().into_owned(),
+    })
+}
+
 #[tauri::command]
 pub fn get_app_version() -> String {
     update::current_version().to_string()
