@@ -367,7 +367,7 @@ const UPDATE_HELPER_SCRIPT: &str = r#"param(
   [int]$ProcessId,
   [string]$StagedExe,
   [string]$TargetExe,
-  [string]$StagedReadme,
+  [string]$StagedReadme = '',
   [string]$TargetReadme,
   [string]$UpdateDir
 )
