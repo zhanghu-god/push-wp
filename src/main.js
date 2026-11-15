@@ -4,8 +4,7 @@ const { invoke, convertFileSrc } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
 const { open, save, confirm: dialogConfirm } = window.__TAURI__.dialog;
 
-const $ = (id) => document.getElementById(id);
-const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
+const { $, systemDark } = window.PKUI;
 
 const state = {
   filePath: null,
@@ -20,8 +19,7 @@ const state = {
 
 function applyTheme() {
   const theme = state.settings.theme || 'system';
-  const dark = theme === 'dark' || (theme === 'system' && systemDark.matches);
-  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  window.PKUI.applyTheme(theme);
   document.querySelectorAll('[data-theme-choice]').forEach((btn) => {
     const selected = btn.dataset.themeChoice === theme;
     btn.classList.toggle('active', selected);

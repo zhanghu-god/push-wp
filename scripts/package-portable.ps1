@@ -6,6 +6,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+node (Join-Path $Root "..\scripts\sync-ui.mjs")
 $Config = Get-Content -Raw -LiteralPath (Join-Path $Root "src-tauri\tauri.conf.json") | ConvertFrom-Json
 $Version = $Config.version
 $Exe = Join-Path $Root "src-tauri\target\release\push-wp.exe"
