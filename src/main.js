@@ -688,11 +688,11 @@ async function checkForUpdate(manual = false) {
   try {
     const info = await invoke('check_update');
     upd.info = info;
-    if (!info.has_update) {
-      setUpdateStatus(`已是最新版本 v${info.current_version}`);
+    if (!info.hasUpdate) {
+      setUpdateStatus(`已是最新版本 v${info.currentVersion}`);
       return;
     }
-    setUpdateStatus(`发现新版本 v${info.latest_version}，正在下载并校验…`);
+    setUpdateStatus(`发现新版本 v${info.latestVersion}，正在下载并校验…`);
     const prepared = await invoke('prepare_update', { info });
     upd.prepared = prepared;
     setUpdateStatus(`新版本 v${prepared.version} 已准备好`);
