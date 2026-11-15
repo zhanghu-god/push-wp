@@ -17,7 +17,15 @@ pub fn current_version() -> &'static str {
 }
 
 pub async fn check_update() -> Result<UpdateInfo, String> {
-    kit::check_update(&CFG, current_version()).await
+    let result = kit::check_update(&CFG, current_version()).await;
+    match &result {
+        Ok(info) => portable_kit::logging::info(&format!(
+            "update check current={} latest={} has_update={}",
+            info.current_version, info.latest_version, info.has_update
+        )),
+        Err(e) => portable_kit::logging::warn(&format!("update check failed: {e}")),
+    }
+    result
 }
 
 pub async fn prepare_update(data_dir: &Path, info: &UpdateInfo) -> Result<PreparedUpdate, String> {

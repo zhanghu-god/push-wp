@@ -11,6 +11,13 @@ mod xmlrpc;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let _ = portable_kit::logging::init("push-wp");
+    portable_kit::logging::install_panic_hook();
+    portable_kit::logging::info(&format!(
+        "startup version={} exe={:?}",
+        env!("CARGO_PKG_VERSION"),
+        std::env::current_exe().ok()
+    ));
     let mut context = tauri::generate_context!();
     // 把 Tauri 的宿主目录统一重定向到 exe 同级 data\，彻底消除系统目录副作用；
     // WebView2 的 localData 指向 data/cache/webview2

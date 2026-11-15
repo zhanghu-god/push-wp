@@ -78,7 +78,12 @@ pub fn get_cached_post(
 /// 执行发布（阻塞式，Tauri 会在独立线程池运行同步命令）
 #[tauri::command]
 pub fn publish_post(app: AppHandle, request: PublishRequest) -> Result<String, String> {
-    publish::publish(&app, &request)
+    let result = publish::publish(&app, &request);
+    match &result {
+        Ok(id) => portable_kit::logging::info(&format!("publish ok post_id={id}")),
+        Err(e) => portable_kit::logging::error(&format!("publish failed: {e}")),
+    }
+    result
 }
 
 /// 查询远程文章列表（分页/搜索/状态筛选）
@@ -102,7 +107,12 @@ pub fn get_post_detail(site: Site, post_id: String) -> Result<PostDetail, String
 /// 删除远程文章并清理本地缓存
 #[tauri::command]
 pub fn delete_post(app: AppHandle, site: Site, post_id: String) -> Result<(), String> {
-    posts::delete_post(&app, &site, &post_id)
+    let result = posts::delete_post(&app, &site, &post_id);
+    match &result {
+        Ok(()) => portable_kit::logging::info(&format!("post deleted id={post_id}")),
+        Err(e) => portable_kit::logging::error(&format!("delete post {post_id} failed: {e}")),
+    }
+    result
 }
 
 /// 拉取站点已有分类与标签（发布表单候选项）
