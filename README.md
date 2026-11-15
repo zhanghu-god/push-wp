@@ -15,7 +15,7 @@
 
 从 Releases 下载便携包 `push-wp_x.x.x_x64-portable.zip`，解压后双击 `push-wp.exe`。
 
-- 配置与缓存保存在程序同级的 `data\` 目录，不写入系统目录
+- 配置与缓存保存在程序同级的 `data\` 目录，**不读写任何系统目录**
 - 删除整个文件夹即完全卸载
 - 首次运行会把旧版本系统目录里的配置自动迁移过来
 
@@ -28,7 +28,7 @@ npx tauri dev     # 开发调试
 npx tauri build   # 打包 release
 ```
 
-产物：`src-tauri/target/release/push-wp.exe`。打包成便携 zip 时，把 exe 与空文件 `.portable` 放在同一文件夹即可启用自包含模式。
+产物：`src-tauri/target/release/push-wp.exe`。配置与缓存始终保存在 exe 同级的 `data\` 目录，自包含、无系统目录依赖。
 
 ## 版本管理
 

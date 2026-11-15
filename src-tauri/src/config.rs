@@ -34,37 +34,28 @@ impl Default for Settings {
     }
 }
 
-/// 应用配置目录（不存在时自动创建）。
+/// 应用数据目录（不存在时自动创建）。
 ///
-/// - 便携模式：exe 同级存在 `.portable` 标记文件时，使用 `exe目录\data\`，
-///   配置与数据全部自包含，不污染系统目录；首次运行自动迁移旧配置。
-/// - 默认：系统应用配置目录（%APPDATA%\com.pushwp.rust）。
+/// 始终为 exe 同级的 `data\`：配置与缓存全部自包含，
+/// 不读写任何系统目录（如 %APPDATA%）。
+/// 首次运行若系统目录有旧配置，会一次性导入到 data\（不覆盖已有文件）。
 pub fn config_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    if let Some(dir) = portable_data_dir() {
-        migrate_legacy_config(app, &dir);
-        fs::create_dir_all(&dir).map_err(|e| format!("无法创建便携数据目录：{e}"))?;
-        return Ok(dir);
-    }
-    let dir = app
-        .path()
-        .app_config_dir()
-        .map_err(|e| format!("无法获取配置目录：{e}"))?;
-    fs::create_dir_all(&dir).map_err(|e| format!("无法创建配置目录：{e}"))?;
+    let dir = exe_data_dir()?;
+    migrate_legacy_config(app, &dir);
+    fs::create_dir_all(&dir).map_err(|e| format!("无法创建数据目录：{e}"))?;
     Ok(dir)
 }
 
-/// 便携模式数据目录：exe 同级有 `.portable` 标记时返回 Some(exe目录/data)
-fn portable_data_dir() -> Option<PathBuf> {
-    let exe = std::env::current_exe().ok()?;
-    let dir = exe.parent()?.to_path_buf();
-    if dir.join(".portable").exists() {
-        Some(dir.join("data"))
-    } else {
-        None
-    }
+/// 数据目录：exe 同级的 data\，不依赖任何系统目录
+fn exe_data_dir() -> Result<PathBuf, String> {
+    let exe = std::env::current_exe().map_err(|e| format!("无法获取程序路径：{e}"))?;
+    let dir = exe
+        .parent()
+        .ok_or_else(|| "无法获取程序所在目录".to_string())?;
+    Ok(dir.join("data"))
 }
 
-/// 便携版首次运行：把系统目录里的旧配置与缓存带过来（不覆盖已有文件）
+/// 一次性导入系统目录里的旧配置与缓存（可选，导入失败不影响运行）
 fn migrate_legacy_config(app: &AppHandle, portable_dir: &PathBuf) {
     let settings = portable_dir.join("settings.json");
     if settings.exists() {
