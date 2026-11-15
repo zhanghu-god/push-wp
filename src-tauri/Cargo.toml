@@ -1,6 +1,6 @@
 [package]
 name = "push-wp"
-version = "0.2.2"
+version = "0.2.3"
 description = "将本地 Markdown 发布到 WordPress（push-wp：Tauri + Rust 实现的发布工具）"
 authors = ["zhang"]
 license = "Apache-2.0"

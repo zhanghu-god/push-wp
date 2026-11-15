@@ -10,6 +10,17 @@ mod xmlrpc;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let mut context = tauri::generate_context!();
+    // 把 Tauri 的宿主目录（含 WebView2 的 EBWebView 数据目录）
+    // 统一重定向到 exe 同级 data\，彻底消除系统目录副作用
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            context.config_mut().app.app_directories_override =
+                Some(tauri::utils::config::AppDirectoriesOverride::Root(
+                    dir.join("data"),
+                ));
+        }
+    }
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
@@ -25,6 +36,6 @@ pub fn run() {
             commands::delete_post,
             commands::get_terms,
         ])
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("启动 Tauri 应用失败");
 }
