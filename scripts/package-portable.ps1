@@ -9,10 +9,6 @@ $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 node (Join-Path $Root "..\scripts\sync-ui.mjs")
 $Config = Get-Content -Raw -LiteralPath (Join-Path $Root "src-tauri\tauri.conf.json") | ConvertFrom-Json
 $Version = $Config.version
-$Exe = Join-Path $Root "src-tauri\target\release\push-wp.exe"
-# workspace 共享 target 在根目录；单独克隆时才在 src-tauri/target
-$WsExe = Join-Path $Root "..\target\release\push-wp.exe"
-if (Test-Path -LiteralPath $WsExe) { $Exe = $WsExe }
 $ReleaseDir = Join-Path $Root "release"
 $Zip = Join-Path $ReleaseDir "push-wp_${Version}_x64-portable.zip"
 $WorkDir = Join-Path $ReleaseDir ("staging-" + [guid]::NewGuid().ToString("N"))
@@ -23,6 +19,8 @@ try {
     rustup run $Toolchain cargo build --release --manifest-path (Join-Path $Root "src-tauri\Cargo.toml")
     if ($LASTEXITCODE -ne 0) { throw "Rust release 构建失败" }
   }
+  $meta = rustup run $Toolchain cargo metadata --format-version 1 --no-deps --manifest-path (Join-Path $Root "src-tauri\Cargo.toml") | ConvertFrom-Json
+  $Exe = Join-Path $meta.target_directory "release\push-wp.exe"
   if (-not (Test-Path -LiteralPath $Exe)) { throw "找不到 release 程序：$Exe" }
 
   New-Item -ItemType Directory -Force -Path $Stage | Out-Null
